@@ -30,3 +30,9 @@ impl From<anyhow::Error> for RpcError {
         RpcError(e.to_string())
     }
 }
+
+impl From<String> for RpcError {
+    fn from(e: String) -> Self {
+        RpcError(e)
+    }
+}

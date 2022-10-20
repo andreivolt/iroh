@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bytes::Bytes;
 use cid::Cid;
@@ -15,7 +15,7 @@ pub trait P2p {
         cid: Cid,
         providers: Vec<PeerId>,
     ) -> Result<Bytes, RpcError>;
-    // async fn fetch_provider_dht(Key) -> Result<futures::Stream<Item = anyhow::Result<Providers>> + Send>>, RpcError>;
+    async fn fetch_provider_dht(key: Cid, limit: usize) -> Result<HashSet<PeerId>, RpcError>;
     async fn stop_session_bitswap(context_id: u64) -> Result<(), RpcError>;
     async fn notify_new_blocks_bitswap(blocks: Vec<(Cid, Bytes)>) -> Result<(), RpcError>;
     async fn get_listening_addrs() -> Result<(PeerId, Vec<Multiaddr>), RpcError>;

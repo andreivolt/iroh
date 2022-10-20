@@ -80,23 +80,15 @@ impl P2pClient {
         Ok(())
     }
 
-    // pub async fn fetch_providers_dht(
-    //     &self,
-    //     key: Cid,
-    // ) -> Result<impl Stream<Item = Result<HashSet<PeerId>>>> {
-    //     let key = key.hash().to_bytes();
-    //     let res = self.backend().await?.fetch_provider_dht(key).await??;
+    pub async fn fetch_providers_dht(&self, key: Cid, limit: usize) -> Result<HashSet<PeerId>> {
+        let res = self
+            .backend()
+            .await?
+            .fetch_provider_dht(default_context(), key, limit)
+            .await??;
 
-    //     let providers_stream = res.map(|p| {
-    //         let p = p?;
-    //         let mut providers = HashSet::new();
-    //         for provider in p.providers.into_iter() {
-    //             providers.insert(PeerId::from_bytes(&provider[..])?);
-    //         }
-    //         Ok(providers)
-    //     });
-    //     Ok(providers_stream)
-    // }
+        Ok(res)
+    }
 
     pub async fn start_providing(&self, key: Cid) -> Result<()> {
         let key = key.hash().to_bytes();

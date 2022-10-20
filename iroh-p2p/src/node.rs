@@ -97,7 +97,6 @@ enum QueryKey {
     ProviderKey(Key),
 }
 
-pub(crate) const DEFAULT_PROVIDER_LIMIT: usize = 10;
 const NICE_INTERVAL: Duration = Duration::from_secs(6);
 const BOOTSTRAP_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const EXPIRY_INTERVAL: Duration = Duration::from_secs(1);
@@ -916,7 +915,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_fetch_providers_mem_dht() -> Result<()> {
         tracing_subscriber::registry()
             .with(fmt::layer().pretty())
@@ -956,32 +955,15 @@ mod tests {
             // Make sure we are bootstrapped.
             tokio::time::sleep(Duration::from_millis(2500)).await;
             let client = RpcClient::new(cfg).await?;
-            // let c = "QmbWqxBEKC3P8tqsKc98xmWNzrzDtRLMiMPL8wBuTGsMnR"
-            //     .parse()
-            //     .unwrap();
+            let c = "QmbWqxBEKC3P8tqsKc98xmWNzrzDtRLMiMPL8wBuTGsMnR"
+                .parse()
+                .unwrap();
 
-            todo!()
-            // let mut providers = Vec::new();
-            // let mut chan = client.p2p.unwrap().fetch_providers_dht(&c).await?;
-            // while let Some(new_providers) = chan.next().await {
-            //     let new_providers = new_providers.unwrap();
-            //     println!("providers found");
-            //     assert!(!new_providers.is_empty());
+            let providers = client.p2p.unwrap().fetch_providers_dht(c, 10).await?;
 
-            //     for p in &new_providers {
-            //         println!("{}", p);
-            //         providers.push(*p);
-            //     }
-            // }
-
-            // println!("{:?}", providers);
-            // assert!(!providers.is_empty());
-            // assert!(
-            //     providers.len() >= DEFAULT_PROVIDER_LIMIT,
-            //     "{} < {}",
-            //     providers.len(),
-            //     DEFAULT_PROVIDER_LIMIT
-            // );
+            println!("{:?}", providers);
+            assert!(!providers.is_empty());
+            assert!(providers.len() >= 10, "{} < {}", providers.len(), 10);
         };
 
         p2p_task.abort();

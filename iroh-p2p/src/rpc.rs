@@ -17,9 +17,9 @@ use libp2p::kad::record::Key;
 use libp2p::Multiaddr;
 use libp2p::PeerId;
 use tarpc::context::Context;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::oneshot;
-use tracing::{debug, trace};
+use tracing::trace;
 
 // use super::node::DEFAULT_PROVIDER_LIMIT;
 
@@ -159,30 +159,29 @@ impl RpcP2p for P2p {
         Ok(())
     }
 
-    // async fn fetch_provider_dht(
-    //     self,
-    //     req: ProviderKey,
-    // ) -> Result<Pin<Box<dyn Stream<Item = Result<Providers>> + Send>>, RpcError> {
-    //     let cid: Cid = req.key.clone().try_into()?;
-    //     trace!("received fetch_provider_dht: {}", cid);
-    //     let (s, r) = channel(64);
+    async fn fetch_provider_dht(
+        self,
+        _ctx: Context,
+        key: Cid,
+        limit: usize,
+    ) -> Result<HashSet<PeerId>, RpcError> {
+        let (s, mut r) = mpsc::channel(limit.min(32));
 
-    //     let msg = RpcMessage::ProviderRequest {
-    //         key: ProviderRequestKey::Dht(req.key.into()),
-    //         response_channel: s,
-    //         limit: DEFAULT_PROVIDER_LIMIT,
-    //     };
+        let msg = RpcMessage::ProviderRequest {
+            key: ProviderRequestKey::Dht(key.hash().to_bytes().into()),
+            response_channel: s,
+            limit,
+        };
 
-    //     self.sender.send(msg).await?;
-    //     let r = tokio_stream::wrappers::ReceiverStream::new(r);
+        self.sender.send(msg).await.map_err(RpcError::from_any)?;
+        let mut results = HashSet::with_capacity(limit);
+        while let Some(provider) = r.recv().await {
+            let provider = provider?;
+            results.extend(provider);
+        }
 
-    //     Ok(Box::pin(r.map(|providers| {
-    //         let providers = providers.map_err(|e| anyhow!(e))?;
-    //         let providers = providers.into_iter().map(|p| p.to_bytes()).collect();
-
-    //         Ok(Providers { providers })
-    //     })))
-    // }
+        Ok(results)
+    }
 
     async fn start_providing(self, _ctx: Context, key: Vec<u8>) -> Result<(), RpcError> {
         let (s, r) = oneshot::channel();
